@@ -5,7 +5,8 @@ export interface SSEEvent {
 
 /** Minimal Server-Sent Events parser over a fetch response body. */
 export async function* parseSSE(body: ReadableStream<Uint8Array>): AsyncGenerator<SSEEvent> {
-  const reader = body.pipeThrough(new TextDecoderStream()).getReader();
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
   let buffer = '';
   let event: string | undefined;
   let data: string[] = [];
@@ -37,7 +38,7 @@ export async function* parseSSE(body: ReadableStream<Uint8Array>): AsyncGenerato
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
-      buffer += value;
+      buffer += decoder.decode(value, { stream: true });
       let nl: number;
       while ((nl = buffer.search(/\r\n|\n|\r/)) !== -1) {
         // A trailing '\r' may be the first half of a CRLF split across chunks.
