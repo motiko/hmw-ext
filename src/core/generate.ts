@@ -42,14 +42,15 @@ export async function runGeneration(
       emit({ type: 'error', code: 'not_configured', message: 'Set up your AI endpoint in the extension settings.' });
       return;
     }
-    const detected = resolveLanguage(req);
+    const detected = await resolveLanguage(req);
     // The default language is only a fallback; it never overrides the thread's language.
     const lang = detected === 'und' && settings.defaultLanguage !== 'auto' ? settings.defaultLanguage : detected;
     const samples = settings.learnStyle
       ? selectSamples(await deps.getSamples(), { lang, recipients: req.context.recipients })
       : [];
     const messages = buildPrompt({
-      request: { ...req, language: lang === 'und' ? 'auto' : lang },
+      request: req,
+      language: lang,
       samples,
       styleNotes: settings.styleNotes,
       examples: settings.examples,

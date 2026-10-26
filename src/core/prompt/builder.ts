@@ -1,9 +1,11 @@
 import type { ChatMessage, GenerateRequest, StyleSample, ThreadMessage } from '../messages';
-import { detectLanguage, languageName } from '../lang';
+import { detectLanguage, languageName, type Detect } from '../lang';
 import { TASK_INSTRUCTIONS } from './tasks';
 
 export interface PromptInput {
   request: GenerateRequest;
+  /** Resolved ISO-639-1 code, or 'und' to let the model follow the thread. */
+  language: string;
   samples: StyleSample[];
   styleNotes: string;
   examples: string[];
@@ -14,12 +16,12 @@ export interface PromptInput {
 const DEFAULT_MAX_CONTEXT_CHARS = 24_000;
 
 /** Explicit choice, else the language of the newest thread message, draft or instruction. */
-export function resolveLanguage(req: GenerateRequest): string {
+export async function resolveLanguage(req: GenerateRequest, detect: Detect = detectLanguage): Promise<string> {
   if (req.language && req.language !== 'auto') return req.language;
   const candidates = [req.context.thread[0]?.text, req.draft, req.previous, req.instruction];
   for (const text of candidates) {
     if (!text) continue;
-    const lang = detectLanguage(text);
+    const lang = await detect(text);
     if (lang !== 'und') return lang;
   }
   return 'und';
@@ -81,9 +83,8 @@ function userPrompt(input: PromptInput): string {
 }
 
 export function buildPrompt(input: PromptInput): ChatMessage[] {
-  const lang = resolveLanguage(input.request);
   return [
-    { role: 'system', content: systemPrompt(input, lang) },
+    { role: 'system', content: systemPrompt(input, input.language) },
     { role: 'user', content: userPrompt(input) },
   ];
 }

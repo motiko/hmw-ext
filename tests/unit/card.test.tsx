@@ -20,6 +20,7 @@ function setup(over: Partial<CardProps> = {}) {
     onInsert: vi.fn(),
     onClose: vi.fn(),
     openSettings: vi.fn(),
+    detect: async () => 'de',
     generate: (req, onEvent) => {
       requests.push(req);
       emit = onEvent;
@@ -120,9 +121,9 @@ describe('HelpMeWriteCard', () => {
     expect(props.openSettings).toHaveBeenCalled();
   });
 
-  it('shows the detected language for Auto', () => {
+  it('shows the detected language for Auto', async () => {
     setup();
-    expect(screen.getByRole('option', { name: 'Auto (German)' })).toBeTruthy();
+    expect(await screen.findByRole('option', { name: 'Auto (German)' })).toBeTruthy();
   });
 
   it('closes and aborts on Escape', () => {

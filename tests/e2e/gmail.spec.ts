@@ -83,3 +83,18 @@ for (const fixture of ['compose-new', 'reply-thread-de'] as const) {
     expect(await page.locator(boundary).evaluateAll((els) => els.map((e) => e.outerHTML))).toEqual(before);
   });
 }
+
+test("uses Chrome's language detection for languages beyond the UI list", async ({ openGmail, configure, llm }) => {
+  await configure();
+  const page = await openGmail('reply-thread-de');
+  await page.evaluate(() => {
+    const newest = document.querySelectorAll('div.a3s');
+    newest[newest.length - 1]!.innerHTML =
+      '<div dir="ltr">Hej Moti,<br><br>vi hade ett möte i dag klockan tio, men du var tyvärr inte där. När passar det dig istället?<br><br>Anna</div>';
+  });
+  await page.click(button);
+  await page.getByRole('button', { name: 'Polish' }).click();
+  await page.getByRole('button', { name: 'Insert' }).waitFor();
+  const sent = llm.requests.find((r) => r.path === '/v1/chat/completions')!.body as { messages: { content: string }[] };
+  expect(sent.messages[0]!.content).toContain('Write in Swedish');
+});

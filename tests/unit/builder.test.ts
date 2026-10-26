@@ -22,21 +22,24 @@ function req(over: Partial<GenerateRequest> = {}): GenerateRequest {
 }
 
 function input(over: Partial<PromptInput> = {}): PromptInput {
-  return { request: req(), samples: [], styleNotes: '', examples: [], sendQuotedHistory: true, ...over };
+  return { request: req(), language: 'de', samples: [], styleNotes: '', examples: [], sendQuotedHistory: true, ...over };
 }
 
 const text = (m: ReturnType<typeof buildPrompt>) => m.map((x) => x.content).join('\n');
 
+// Fake detector: German if the text contains 'wir', English if it contains 'the', else unknown.
+const detect = async (t: string) => (/\bwir\b/.test(t) ? 'de' : /\bthe\b/.test(t) ? 'en' : 'und');
+
 describe('resolveLanguage', () => {
-  it('prefers an explicit language', () => {
-    expect(resolveLanguage(req({ language: 'fr' }))).toBe('fr');
+  it('prefers an explicit language', async () => {
+    expect(await resolveLanguage(req({ language: 'fr' }), detect)).toBe('fr');
   });
-  it('uses the newest thread message when auto', () => {
-    expect(resolveLanguage(req())).toBe('de');
+  it('uses the newest thread message when auto', async () => {
+    expect(await resolveLanguage(req(), detect)).toBe('de');
   });
-  it('falls back to the instruction for a new email', () => {
+  it('falls back to the instruction for a new email', async () => {
     expect(
-      resolveLanguage(req({ context: { subject: '', recipients: [], userEmail: '', thread: [] }, instruction: 'Write a short note to the team saying the release is delayed until Monday because of a bug' })),
+      await resolveLanguage(req({ context: { subject: '', recipients: [], userEmail: '', thread: [] }, instruction: 'tell the team about the delay' }), detect),
     ).toBe('en');
   });
 });
@@ -44,6 +47,10 @@ describe('resolveLanguage', () => {
 describe('buildPrompt', () => {
   it('returns a system and a user message', () => {
     expect(buildPrompt(input()).map((m) => m.role)).toEqual(['system', 'user']);
+  });
+
+  it('asks the model to match the thread language when unknown', () => {
+    expect(buildPrompt(input({ language: 'und' }))[0]!.content).toContain('same language as the email thread');
   });
 
   it('asks for the body only, in the resolved language', () => {

@@ -71,15 +71,18 @@ export default defineContentScript({
       closeCard = close;
     };
 
-    const learnFrom = (composer: Composer) => {
+    const learnFrom = async (composer: Composer) => {
       const context = adapter.getContext(composer, document);
       const others = context.thread.filter((m) => !m.isOwn).map((m) => m.fromEmail);
-      const items = context.thread
-        .filter((m) => m.isOwn && !learned.has(m.text))
-        .map((m) => {
-          learned.add(m.text);
-          return { text: m.text, lang: detectLanguage(m.text), recipient: others[0] ?? context.recipients[0] ?? '' };
-        });
+      const own = context.thread.filter((m) => m.isOwn && !learned.has(m.text));
+      own.forEach((m) => learned.add(m.text));
+      const items = await Promise.all(
+        own.map(async (m) => ({
+          text: m.text,
+          lang: await detectLanguage(m.text),
+          recipient: others[0] ?? context.recipients[0] ?? '',
+        })),
+      );
       if (items.length) void sendRuntime({ type: 'add-samples', items });
     };
 
@@ -91,7 +94,7 @@ export default defineContentScript({
         composer.body.setAttribute(MARK, '1');
         composer.body.addEventListener('focusin', () => (lastComposer = composer));
         mountShadow(slot, css, <ToolbarButton onClick={() => openCard(composer)} />);
-        learnFrom(composer);
+        void learnFrom(composer);
       }
     };
 

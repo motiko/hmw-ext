@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { languageName } from '@/core/lang';
+import { detectLanguage, languageName, type Detect } from '@/core/lang';
 import type { ComposeContext, ErrorCode, GenerateRequest, Task } from '@/core/messages';
 import { resolveLanguage } from '@/core/prompt/builder';
 import type { InsertMode } from '@/sites/types';
@@ -16,6 +16,7 @@ export interface CardProps {
   onClose(): void;
   openSettings(): void;
   generate: Generate;
+  detect?: Detect;
 }
 
 const LANGUAGES = ['en', 'de', 'fr', 'es', 'it', 'nl', 'pt', 'pl'];
@@ -24,10 +25,7 @@ type View = 'prompt' | 'streaming' | 'result' | 'error';
 
 export function HelpMeWriteCard(props: CardProps) {
   const context = useMemo(() => props.getContext(), []);
-  const detected = useMemo(
-    () => resolveLanguage({ type: 'generate', task: 'create', instruction: '', draft: props.draft.text, context, language: 'auto' }),
-    [],
-  );
+  const [detected, setDetected] = useState('und');
   const [view, setView] = useState<View>('prompt');
   const [instruction, setInstruction] = useState('');
   const [followup, setFollowup] = useState('');
@@ -38,6 +36,11 @@ export function HelpMeWriteCard(props: CardProps) {
   const handle = useRef<{ abort(): void } | null>(null);
   const textRef = useRef('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const req: GenerateRequest = { type: 'generate', task: 'create', instruction: '', draft: props.draft.text, context, language: 'auto' };
+    void resolveLanguage(req, props.detect ?? detectLanguage).then(setDetected);
+  }, []);
 
   useEffect(() => {
     inputRef.current?.focus();

@@ -21,7 +21,6 @@
     "icons": "node scripts/icons.mjs"
   },
   "dependencies": {
-    "franc-min": "^6.2.0",
     "preact": "^11.0.2"
   },
   "devDependencies": {
