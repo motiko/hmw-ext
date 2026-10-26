@@ -1,17 +1,10 @@
 import { browser, type Browser } from 'wxt/browser';
 import { providerConfig, runGeneration } from '@/core/generate';
-import { PORT_NAME, type GenerateRequest, type StyleSample } from '@/core/messages';
+import { PORT_NAME, type GenerateRequest } from '@/core/messages';
 import { getProvider, ProviderError } from '@/core/providers/registry';
-import { getSettings, type Settings } from '@/core/settings';
+import type { RuntimeMessage, RuntimeResult } from '@/core/runtime';
+import { getSettings } from '@/core/settings';
 import { addSamples } from '@/core/style/store';
-
-export type RuntimeMessage =
-  | { type: 'test-connection'; settings?: Settings }
-  | { type: 'list-models'; settings?: Settings }
-  | { type: 'add-samples'; items: Omit<StyleSample, 'hash' | 'ts'>[] }
-  | { type: 'open-options' };
-
-export type RuntimeResult = { ok: true; models?: string[] } | { ok: false; code: string; message: string };
 
 function failure(e: unknown): RuntimeResult {
   const err = e instanceof ProviderError ? e : new ProviderError('network', (e as Error).message);
