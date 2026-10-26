@@ -1,5 +1,6 @@
 import { browser, type Browser } from 'wxt/browser';
 import { providerConfig, runGeneration } from '@/core/generate';
+import { keepAlive } from '@/core/keepalive';
 import { PORT_NAME, type GenerateRequest } from '@/core/messages';
 import { getProvider, ProviderError } from '@/core/providers/registry';
 import type { RuntimeMessage, RuntimeResult } from '@/core/runtime';
@@ -47,6 +48,8 @@ function handlePort(port: Browser.runtime.Port) {
     }
     if (started) return;
     started = true;
+    // Slow first tokens (cold local models, reasoning models) must not let Chrome kill the worker.
+    const stopKeepAlive = keepAlive(() => browser.runtime.getPlatformInfo());
     void runGeneration(
       msg,
       (event) => {
@@ -57,7 +60,7 @@ function handlePort(port: Browser.runtime.Port) {
         }
       },
       controller.signal,
-    );
+    ).finally(stopKeepAlive);
   });
 }
 
