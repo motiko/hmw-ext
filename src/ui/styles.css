@@ -1,0 +1,94 @@
+:host {
+  all: initial;
+  --hmw-text: #1f1f1f;
+  --hmw-muted: #444746;
+  --hmw-border: #c4c7c5;
+  --hmw-surface: #fff;
+  --hmw-tint: #f0f4f9;
+  --hmw-accent: #0b57d0;
+  --hmw-on-accent: #fff;
+  --hmw-error: #b3261e;
+  font-family: 'Google Sans', Roboto, Arial, sans-serif;
+  color: var(--hmw-text);
+}
+* { box-sizing: border-box; }
+button { font: inherit; cursor: pointer; }
+button:disabled { cursor: default; opacity: 0.45; }
+
+.toolbar-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; margin: 0 2px; padding: 0;
+  border: 0; border-radius: 50%; background: transparent; color: var(--hmw-muted);
+}
+.toolbar-btn:hover { background: rgba(68, 71, 70, 0.08); color: var(--hmw-accent); }
+.toolbar-btn:focus-visible { outline: 2px solid var(--hmw-accent); }
+
+.card {
+  width: 100%;
+  background: var(--hmw-surface);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
+  font-size: 14px; line-height: 20px;
+  overflow: hidden;
+}
+.card-head { display: flex; align-items: center; gap: 8px; padding: 12px 8px 4px 16px; }
+.spark { display: inline-flex; color: #6a5cff; }
+.title { font-size: 16px; font-weight: 500; flex: 1; }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: var(--hmw-muted);
+}
+.icon-btn:hover:not(:disabled) { background: rgba(68, 71, 70, 0.08); }
+.card-body { padding: 4px 16px 8px; display: flex; flex-direction: column; gap: 8px; }
+.prompt, .followup input {
+  width: 100%; font: inherit; color: var(--hmw-text);
+  border: 1px solid var(--hmw-border); border-radius: 12px; padding: 10px 12px; background: var(--hmw-surface);
+  resize: none; outline: none;
+}
+.prompt:focus, .followup input:focus { border-color: var(--hmw-accent); box-shadow: 0 0 0 1px var(--hmw-accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  border: 1px solid var(--hmw-border); border-radius: 8px; background: var(--hmw-surface);
+  padding: 6px 14px; color: var(--hmw-text);
+}
+.chip:hover { background: var(--hmw-tint); }
+.card-foot { display: flex; align-items: center; gap: 8px; }
+.spacer { flex: 1; }
+.card-foot .primary { margin-left: auto; }
+.lang {
+  font: inherit; font-size: 13px; color: var(--hmw-muted);
+  border: 0; background: var(--hmw-tint); border-radius: 8px; padding: 6px 8px; max-width: 60%;
+}
+.primary {
+  border: 0; border-radius: 999px; padding: 8px 24px;
+  background: var(--hmw-accent); color: var(--hmw-on-accent); font-weight: 500;
+}
+.primary:hover:not(:disabled) { box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3); }
+.secondary {
+  border: 1px solid var(--hmw-border); border-radius: 999px; padding: 7px 20px;
+  background: transparent; color: var(--hmw-accent); font-weight: 500;
+}
+.text-btn { border: 0; background: transparent; color: var(--hmw-accent); font-weight: 500; padding: 8px 12px; border-radius: 999px; }
+.text-btn:hover:not(:disabled) { background: rgba(11, 87, 208, 0.08); }
+.asked { color: var(--hmw-muted); font-size: 13px; }
+.preview {
+  white-space: pre-wrap; overflow-wrap: anywhere;
+  max-height: 280px; overflow-y: auto;
+  background: var(--hmw-tint); border-radius: 12px; padding: 12px;
+  min-height: 60px;
+}
+.cursor { display: inline-block; width: 7px; height: 16px; margin-left: 2px; vertical-align: text-bottom; background: var(--hmw-accent); animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.muted { color: var(--hmw-muted); font-size: 13px; }
+.followup { display: flex; gap: 4px; align-items: center; }
+.menu-wrap { position: relative; }
+.menu {
+  position: absolute; bottom: 100%; left: 0; margin-bottom: 4px; z-index: 1;
+  display: flex; flex-direction: column; min-width: 160px; padding: 8px 0;
+  background: var(--hmw-surface); border-radius: 8px;
+  box-shadow: 0 2px 6px 2px rgba(60, 64, 67, 0.15), 0 1px 2px rgba(60, 64, 67, 0.3);
+}
+.menu button { border: 0; background: transparent; text-align: left; padding: 8px 16px; color: var(--hmw-text); }
+.menu button:hover { background: var(--hmw-tint); }
+.error { color: var(--hmw-error); background: #fce8e6; border-radius: 12px; padding: 12px; }
+.disclaimer { font-size: 11px; color: var(--hmw-muted); padding: 0 16px 10px; }
