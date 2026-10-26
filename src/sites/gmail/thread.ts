@@ -3,12 +3,12 @@ import { SEL } from './selectors';
 import { ownText } from './text';
 
 /** Messages of the open conversation, newest first. Collapsed messages without a body are skipped. */
-export function readThread(doc: Document, userEmail: string): ThreadMessage[] {
-  const selector = SEL.messages.find((s) => doc.querySelector(s));
+export function readThread(scope: ParentNode, userEmail: string): ThreadMessage[] {
+  const selector = SEL.messages.find((s) => scope.querySelector(s));
   if (!selector) return [];
   const me = userEmail.toLowerCase();
   const out: ThreadMessage[] = [];
-  doc.querySelectorAll(selector).forEach((el) => {
+  scope.querySelectorAll(selector).forEach((el) => {
     const body = el.querySelector(SEL.messageBody);
     if (!body) return;
     const sender = el.querySelector(SEL.sender);

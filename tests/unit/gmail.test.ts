@@ -176,3 +176,36 @@ describe('indented text', () => {
     expect(gmailAdapter.getDraft(c).text).toBe('Intro\nindented point\nOutro');
   });
 });
+
+describe('stale views', () => {
+  function addHiddenOldThread() {
+    const old = document.createElement('div');
+    old.setAttribute('role', 'main');
+    old.style.display = 'none';
+    old.innerHTML =
+      '<h2 class="hP">Old unrelated thread</h2><div class="adn ads" data-message-id="#msg-f:9"><span class="gD" email="old@example.org" name="Old">Old</span><span class="g3" title="gestern">gestern</span><div class="a3s">OLD THREAD TEXT that must not leak</div></div>';
+    document.body.prepend(old);
+  }
+
+  it('reads only the thread around an inline reply, not hidden earlier views', () => {
+    load('reply-thread-de');
+    addHiddenOldThread();
+    const ctx = gmailAdapter.getContext(only(), document);
+    expect(ctx.subject).toBe('Termin am Freitag');
+    expect(ctx.thread.map((m) => m.text).join()).not.toContain('OLD THREAD TEXT');
+    expect(ctx.thread).toHaveLength(3);
+  });
+
+  it('matches a pop-out reply to the visible thread only', () => {
+    load('reply-thread-de');
+    addHiddenOldThread();
+    const dialog = document.createElement('div');
+    dialog.innerHTML = fixture('compose-new').match(/<div class="dw">[\s\S]*<\/div>\s*<\/body>/)![0].replace('</body>', '');
+    dialog.querySelector('input')!.setAttribute('value', 'AW: Termin am Freitag');
+    document.body.appendChild(dialog);
+    const pop = gmailAdapter.findComposers(document).find((c) => c.root.closest('[role="dialog"]'))!;
+    const ctx = gmailAdapter.getContext(pop, document);
+    expect(ctx.thread).toHaveLength(3);
+    expect(ctx.thread.map((m) => m.text).join()).not.toContain('OLD THREAD TEXT');
+  });
+});

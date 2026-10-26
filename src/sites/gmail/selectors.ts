@@ -5,6 +5,7 @@ export const SEL = {
   toolbar: 'tr.btC',
   toolbarSlot: 'td[data-hmw-slot]',
   dialog: '[role="dialog"]',
+  view: '[role="main"]',
   subjectInput: 'input[name="subjectbox"]',
   threadSubject: 'h2.hP',
   recipients: '[data-hovercard-id], span[email]',

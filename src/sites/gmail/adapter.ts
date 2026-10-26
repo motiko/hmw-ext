@@ -18,6 +18,25 @@ export function getUserEmail(doc: Document): string {
 
 const stripReplyPrefix = (s: string) => s.replace(/^((re|aw|wg|fw|fwd|antw|tr)\s*:\s*)+/i, '').trim().toLowerCase();
 
+function isHidden(el: Element): boolean {
+  for (let n: Element | null = el; n; n = n.parentElement) {
+    if ((n as HTMLElement).hidden) return true;
+    const style = n.ownerDocument.defaultView?.getComputedStyle(n);
+    if (style && (style.display === 'none' || style.visibility === 'hidden')) return true;
+  }
+  return false;
+}
+
+/**
+ * The conversation view a composer belongs to. Gmail keeps earlier views hidden in the DOM,
+ * so inline replies use their own view and dialogs use the visible one.
+ */
+function threadView(composer: Composer, doc: Document): Element | null {
+  const own = composer.root.closest(SEL.view);
+  if (own) return own;
+  return [...doc.querySelectorAll(SEL.view)].find((v) => v.querySelector(SEL.threadSubject) && !isHidden(v)) ?? null;
+}
+
 function findComposerRoot(body: HTMLElement): { root: HTMLElement; toolbar: HTMLElement } | null {
   let el: HTMLElement | null = body.parentElement;
   for (let i = 0; el && i < MAX_COMPOSER_DEPTH; i++, el = el.parentElement) {
@@ -40,7 +59,8 @@ export const gmailAdapter: SiteAdapter = {
   getContext(composer, doc): ComposeContext {
     const userEmail = getUserEmail(doc);
     const subjectInput = composer.root.querySelector<HTMLInputElement>(SEL.subjectInput)?.value.trim() ?? '';
-    const threadSubject = doc.querySelector(SEL.threadSubject)?.textContent?.trim() ?? '';
+    const view = threadView(composer, doc);
+    const threadSubject = view?.querySelector(SEL.threadSubject)?.textContent?.trim() ?? '';
     const inDialog = Boolean(composer.root.closest(SEL.dialog));
     // A compose dialog only belongs to the visible thread if it is a reply to it (pop-out reply).
     const isReply =
@@ -54,7 +74,7 @@ export const gmailAdapter: SiteAdapter = {
       subject: subjectInput || (isReply ? threadSubject : ''),
       recipients,
       userEmail,
-      thread: isReply ? readThread(doc, userEmail) : [],
+      thread: isReply && view ? readThread(view, userEmail) : [],
     };
   },
 
