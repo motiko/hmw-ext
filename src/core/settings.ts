@@ -9,7 +9,8 @@ export interface Settings {
   /** 'api-key' header is used by Azure OpenAI. */
   authHeader: 'bearer' | 'api-key';
   model: string;
-  temperature: number;
+  /** null = use the model's default (required by reasoning models). */
+  temperature: number | null;
   defaultLanguage: string;
   learnStyle: boolean;
   sendQuotedHistory: boolean;
@@ -28,7 +29,7 @@ export const DEFAULT_SETTINGS: Settings = {
   apiKey: '',
   authHeader: 'bearer',
   model: '',
-  temperature: 0.7,
+  temperature: null,
   defaultLanguage: 'auto',
   learnStyle: true,
   sendQuotedHistory: true,

@@ -47,6 +47,10 @@ async function codeOf(p: Promise<unknown>) {
 }
 
 describe('joinUrl', () => {
+  it('keeps a query string at the end (Azure api-version)', () =>
+    expect(joinUrl('https://r.openai.azure.com/openai/deployments/d?api-version=2024-10-21', '/chat/completions')).toBe(
+      'https://r.openai.azure.com/openai/deployments/d/chat/completions?api-version=2024-10-21',
+    ));
   it('avoids a doubled /v1', () => expect(joinUrl('https://x/v1/', '/v1/messages')).toBe('https://x/v1/messages'));
   it('strips trailing slashes', () => expect(joinUrl('https://x/v1//', '/chat/completions')).toBe('https://x/v1/chat/completions'));
   it('appends to a bare host', () => expect(joinUrl('https://api.anthropic.com', '/v1/messages')).toBe('https://api.anthropic.com/v1/messages'));
@@ -68,6 +72,20 @@ describe('OpenAI-compatible provider', () => {
     expect(url).toBe('https://api.example.com/v1/chat/completions');
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer sk-test');
     expect(JSON.parse(init.body as string)).toMatchObject({ model: 'm1', stream: true, temperature: 0.5, messages });
+  });
+
+  it('omits temperature when the model default is selected', async () => {
+    const f = stubFetch(sse(['data: [DONE]\n\n']));
+    await collect(p.stream(messages, cfg({ temperature: null }), new AbortController().signal));
+    expect(JSON.parse((f.mock.calls[0] as unknown as [string, RequestInit])[1].body as string)).not.toHaveProperty('temperature');
+  });
+
+  it('tests the connection without token-limit parameters reasoning models reject', async () => {
+    const f = stubFetch(new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }));
+    await p.test(cfg());
+    const body = JSON.parse((f.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(body).not.toHaveProperty('max_tokens');
+    expect(body).not.toHaveProperty('temperature');
   });
 
   it('uses the api-key header when configured (Azure)', async () => {

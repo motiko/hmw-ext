@@ -16,6 +16,10 @@ describe('settings', () => {
     expect(s.temperature).toBe(DEFAULT_SETTINGS.temperature);
   });
 
+  it('uses the model default temperature unless the user sets one', () => {
+    expect(DEFAULT_SETTINGS.temperature).toBeNull();
+  });
+
   it('caps pasted examples at 5', async () => {
     const s = await saveSettings({ examples: ['1', '2', '3', '4', '5', '6'] });
     expect(s.examples).toHaveLength(5);

@@ -143,10 +143,16 @@ export function App() {
             ))}
           </datalist>
         </div>
-        <label>
-          Temperature ({s.temperature.toFixed(1)})
-          <input type="range" min="0" max="1" step="0.1" value={s.temperature} onInput={(e) => set('temperature', Number(e.currentTarget.value))} />
+        <label class="check">
+          <input type="checkbox" checked={s.temperature !== null} onChange={(e) => set('temperature', e.currentTarget.checked ? 0.7 : null)} />
+          Custom temperature (leave off for reasoning models)
         </label>
+        {s.temperature !== null && (
+          <label>
+            Temperature ({s.temperature.toFixed(1)})
+            <input type="range" min="0" max="1" step="0.1" value={s.temperature} onInput={(e) => set('temperature', Number(e.currentTarget.value))} />
+          </label>
+        )}
       </section>
 
       <section>

@@ -10,12 +10,14 @@ function headers(cfg: ProviderConfig): Record<string, string> {
   return h;
 }
 
+export const temperature = (cfg: ProviderConfig) => (cfg.temperature === null ? {} : { temperature: cfg.temperature });
+
 export const openaiProvider: Provider = {
   async *stream(messages, cfg, signal) {
     const res = await request(joinUrl(cfg.baseUrl, '/chat/completions'), {
       method: 'POST',
       headers: headers(cfg),
-      body: JSON.stringify({ model: cfg.model, messages, temperature: cfg.temperature, stream: true }),
+      body: JSON.stringify({ model: cfg.model, messages, stream: true, ...temperature(cfg) }),
       signal,
     });
     try {
@@ -40,7 +42,8 @@ export const openaiProvider: Provider = {
     await request(joinUrl(cfg.baseUrl, '/chat/completions'), {
       method: 'POST',
       headers: headers(cfg),
-      body: JSON.stringify({ model: cfg.model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 1 }),
+      // No max_tokens/temperature: reasoning models reject them.
+      body: JSON.stringify({ model: cfg.model, messages: [{ role: 'user', content: 'Reply with OK.' }] }),
     });
   },
 

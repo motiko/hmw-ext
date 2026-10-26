@@ -4,7 +4,7 @@ export interface ProviderConfig {
   baseUrl: string;
   apiKey: string;
   model: string;
-  temperature: number;
+  temperature: number | null;
   authHeader: 'bearer' | 'api-key';
 }
 
@@ -27,11 +27,13 @@ export interface Provider {
 
 /** Joins base URL and path without doubling a shared segment like '/v1'. */
 export function joinUrl(base: string, path: string): string {
-  const b = base.replace(/\/+$/, '');
+  const q = base.indexOf('?');
+  const query = q === -1 ? '' : base.slice(q);
+  const b = (q === -1 ? base : base.slice(0, q)).replace(/\/+$/, '');
   const p = path.startsWith('/') ? path : `/${path}`;
   const firstSegment = p.match(/^\/[^/]+/)?.[0];
-  if (firstSegment && p !== firstSegment && b.endsWith(firstSegment)) return b + p.slice(firstSegment.length);
-  return b + p;
+  if (firstSegment && p !== firstSegment && b.endsWith(firstSegment)) return b + p.slice(firstSegment.length) + query;
+  return b + p + query;
 }
 
 function snippet(body: string): string {

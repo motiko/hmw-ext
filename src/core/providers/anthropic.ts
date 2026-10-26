@@ -28,8 +28,8 @@ export const anthropicProvider: Provider = {
       body: JSON.stringify({
         model: cfg.model,
         max_tokens: MAX_TOKENS,
-        temperature: cfg.temperature,
         stream: true,
+        ...(cfg.temperature === null ? {} : { temperature: cfg.temperature }),
         ...split(messages),
       }),
       signal,
