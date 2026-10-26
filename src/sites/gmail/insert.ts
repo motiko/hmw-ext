@@ -37,9 +37,40 @@ export function replaceRange(body: HTMLElement, range: Range, html: string): voi
   }
 }
 
+const anchors = new WeakMap<HTMLElement, HTMLElement>();
+const watched = new WeakSet<HTMLElement>();
+
+/** Undo restores our anchor block as an empty line; drop it so undo returns the original draft. */
+function watchUndo(body: HTMLElement): void {
+  if (watched.has(body)) return;
+  watched.add(body);
+  body.addEventListener('input', (e) => {
+    if ((e as InputEvent).inputType !== 'historyUndo') return;
+    const anchor = anchors.get(body);
+    if (anchor?.isConnected && anchor.childNodes.length === 1 && anchor.firstChild?.nodeName === 'BR') {
+      anchor.remove();
+      anchors.delete(body);
+    }
+  });
+}
+
 export function replaceDraft(body: HTMLElement, text: string): void {
   const { range, hasBoundary } = draftRange(body);
-  replaceRange(body, range, toHtml(text) + (hasBoundary ? '<div><br></div>' : ''));
+  if (!hasBoundary) {
+    replaceRange(body, range, toHtml(text));
+    return;
+  }
+  // Chrome moves the caret into the next block after deleting a selection that ends right
+  // before it, which would put our text inside the signature prefix. Ending the selection
+  // inside a block of our own keeps the insertion in front of the signature/quote.
+  const anchor = body.ownerDocument.createElement('div');
+  anchor.appendChild(body.ownerDocument.createElement('br'));
+  const end = range.endContainer.childNodes[range.endOffset] ?? null;
+  body.insertBefore(anchor, end);
+  range.setEnd(anchor, anchor.childNodes.length);
+  anchors.set(body, anchor);
+  watchUndo(body);
+  replaceRange(body, range, toHtml(text) + '<div><br></div>');
 }
 
 export function replaceSelection(body: HTMLElement, range: Range, text: string): void {

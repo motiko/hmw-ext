@@ -64,3 +64,22 @@ test('typing in the card does not leak keys to the page', async ({ openGmail, co
   await page.getByPlaceholder(/Ask for a draft/).pressSequentially('c?');
   expect(await page.evaluate(() => (window as unknown as { leaked: string[] }).leaked)).toEqual([]);
 });
+
+for (const fixture of ['compose-new', 'reply-thread-de'] as const) {
+  test(`insert never lands inside the signature or quote (${fixture})`, async ({ openGmail, configure }) => {
+    await configure();
+    const page = await openGmail(fixture);
+    const boundary = `${body} :is(.gmail_signature_prefix, .gmail_signature, .gmail_quote)`;
+    const before = await page.locator(boundary).evaluateAll((els) => els.map((e) => e.outerHTML));
+    await page.click(button);
+    if (fixture === 'compose-new') {
+      await page.getByPlaceholder(/Ask for a draft/).fill('x');
+      await page.getByRole('button', { name: 'Create' }).click();
+    } else {
+      await page.getByRole('button', { name: 'Polish' }).click();
+    }
+    await page.getByRole('button', { name: 'Insert' }).click();
+    await expect(page.locator(body)).toContainText('Donnerstag passt.');
+    expect(await page.locator(boundary).evaluateAll((els) => els.map((e) => e.outerHTML))).toEqual(before);
+  });
+}
