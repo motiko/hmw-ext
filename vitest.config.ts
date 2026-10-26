@@ -9,5 +9,6 @@ export default defineConfig({
     globals: true,
     mockReset: true,
     restoreMocks: true,
+    unstubGlobals: true,
   },
 });
