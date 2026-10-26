@@ -14,7 +14,8 @@ export const SEL = {
   messageBody: 'div.a3s',
   account: 'a[aria-label*="@"]',
   /** Parts of a draft or message that are not the author's own words. */
-  notOwnText: '.gmail_signature_prefix, .gmail_signature, .gmail_quote, .gmail_extra, blockquote',
+  notOwnText:
+    '.gmail_signature_prefix, .gmail_signature, .gmail_quote, .gmail_extra, blockquote.gmail_quote, blockquote[type="cite"]',
 } as const;
 
 /** Max ancestors to climb from the editable body to find its toolbar. */

@@ -167,3 +167,12 @@ describe('toHtml', () => {
     expect(toHtml('a\n\nb')).toBe('<div>a</div><div><br></div><div>b</div>');
   });
 });
+
+describe('indented text', () => {
+  it('treats a user-indented blockquote as part of the draft', () => {
+    load('compose-new');
+    const c = only();
+    c.body.innerHTML = 'Intro<blockquote style="margin:0 0 0 40px">indented point</blockquote>Outro<br><div class="gmail_signature_prefix">-- </div><div class="gmail_signature">Sig</div>';
+    expect(gmailAdapter.getDraft(c).text).toBe('Intro\nindented point\nOutro');
+  });
+});
