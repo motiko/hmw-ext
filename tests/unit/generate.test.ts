@@ -78,6 +78,24 @@ describe('runGeneration', () => {
     expect(events).toEqual([{ type: 'error', code: 'unauthorized', message: 'bad key' }]);
   });
 
+  it('reports an empty completion as bad_response instead of done', async () => {
+    const events = await run(
+      deps({
+        getProvider: () =>
+          provider(async function* () {
+            yield '  ';
+          }),
+      }),
+    );
+    expect(events.at(-1)).toMatchObject({ type: 'error', code: 'bad_response' });
+    expect(events.some((e) => e.type === 'done')).toBe(false);
+  });
+
+  it('emits an error when settings cannot be read', async () => {
+    const events = await run(deps({ getSettings: async () => Promise.reject(new Error('storage broken')) }));
+    expect(events).toEqual([expect.objectContaining({ type: 'error', message: expect.stringContaining('storage broken') })]);
+  });
+
   it('emits nothing after abort', async () => {
     const ac = new AbortController();
     const events = await run(

@@ -36,32 +36,38 @@ export async function runGeneration(
   signal: AbortSignal,
   deps: GenerationDeps = defaultDeps,
 ): Promise<void> {
-  const settings = await deps.getSettings();
-  if (!isConfigured(settings)) {
-    emit({ type: 'error', code: 'not_configured', message: 'Set up your AI endpoint in the extension settings.' });
-    return;
-  }
-  const request = req;
-  const detected = resolveLanguage(request);
-  // The default language is only a fallback; it never overrides the thread's language.
-  const lang = detected === 'und' && settings.defaultLanguage !== 'auto' ? settings.defaultLanguage : detected;
-  const samples = settings.learnStyle
-    ? selectSamples(await deps.getSamples(), { lang, recipients: request.context.recipients })
-    : [];
-  const messages = buildPrompt({
-    request: { ...request, language: lang === 'und' ? 'auto' : lang },
-    samples,
-    styleNotes: settings.styleNotes,
-    examples: settings.examples,
-    sendQuotedHistory: settings.sendQuotedHistory,
-  });
-  const cfg = await providerConfig(settings, deps.getCredential);
   try {
+    const settings = await deps.getSettings();
+    if (!isConfigured(settings)) {
+      emit({ type: 'error', code: 'not_configured', message: 'Set up your AI endpoint in the extension settings.' });
+      return;
+    }
+    const detected = resolveLanguage(req);
+    // The default language is only a fallback; it never overrides the thread's language.
+    const lang = detected === 'und' && settings.defaultLanguage !== 'auto' ? settings.defaultLanguage : detected;
+    const samples = settings.learnStyle
+      ? selectSamples(await deps.getSamples(), { lang, recipients: req.context.recipients })
+      : [];
+    const messages = buildPrompt({
+      request: { ...req, language: lang === 'und' ? 'auto' : lang },
+      samples,
+      styleNotes: settings.styleNotes,
+      examples: settings.examples,
+      sendQuotedHistory: settings.sendQuotedHistory,
+    });
+    const cfg = await providerConfig(settings, deps.getCredential);
+    let received = '';
     for await (const text of deps.getProvider(settings.provider).stream(messages, cfg, signal)) {
       if (signal.aborted) return;
+      received += text;
       emit({ type: 'token', text });
     }
-    if (!signal.aborted) emit({ type: 'done' });
+    if (signal.aborted) return;
+    if (!received.trim()) {
+      emit({ type: 'error', code: 'bad_response', message: 'The endpoint returned no text. Check the base URL and model.' });
+      return;
+    }
+    emit({ type: 'done' });
   } catch (e) {
     if (signal.aborted) return;
     const err = e instanceof ProviderError ? e : new ProviderError('network', (e as Error).message);
