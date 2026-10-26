@@ -20,6 +20,7 @@ export default defineContentScript({
     let lastComposer: Composer | null = null;
     let closeCard: (() => void) | null = null;
     const learned = new Set<string>();
+    const mounted: (() => void)[] = [];
 
     const openCard = (composer: Composer) => {
       closeCard?.();
@@ -92,8 +93,15 @@ export default defineContentScript({
         const slot = adapter.mountPoint(composer);
         if (!slot) continue;
         composer.body.setAttribute(MARK, '1');
-        composer.body.addEventListener('focusin', () => (lastComposer = composer));
-        mountShadow(slot, css, <ToolbarButton onClick={() => openCard(composer)} />);
+        const onFocus = () => (lastComposer = composer);
+        composer.body.addEventListener('focusin', onFocus);
+        const unmount = mountShadow(slot, css, <ToolbarButton onClick={() => openCard(composer)} />);
+        mounted.push(() => {
+          unmount();
+          slot.closest('td')?.remove();
+          composer.body.removeAttribute(MARK);
+          composer.body.removeEventListener('focusin', onFocus);
+        });
         void learnFrom(composer);
       }
     };
@@ -104,9 +112,11 @@ export default defineContentScript({
       timer = ctx.setTimeout(scan, SCAN_DEBOUNCE_MS);
     });
     observer.observe(document.body, { childList: true, subtree: true });
+    // On extension update/reload, remove our UI so the new content script can mount fresh buttons.
     ctx.onInvalidated(() => {
       observer.disconnect();
       closeCard?.();
+      mounted.splice(0).forEach((cleanup) => cleanup());
     });
     scan();
 
