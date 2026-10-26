@@ -35,7 +35,10 @@ export const test = base.extend<Fixtures>({
   configure: async ({ worker, llm }, use) => {
     await use(async (settings) => {
       const value = settings ?? { provider: 'openai', baseUrl: llm.url, apiKey: 'test-key', model: 'mock-model' };
-      await worker.evaluate((s) => chrome.storage.local.set({ settings: s }), value);
+      await worker.evaluate((s) => {
+        const { chrome } = globalThis as unknown as { chrome: { storage: { local: { set(v: object): Promise<void> } } } };
+        return chrome.storage.local.set({ settings: s });
+      }, value);
     });
   },
   openGmail: async ({ context }, use) => {
