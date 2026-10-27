@@ -72,6 +72,7 @@ describe('getContext', () => {
     expect(ctx.subject).toBe('Termin am Freitag');
     expect(ctx.recipients).toEqual(['anna@example.org']);
     expect(ctx.userEmail).toBe('moti@example.com');
+    expect(ctx.userName).toBe('Moti Koritz');
     expect(ctx.thread.map((m) => m.date)).toEqual([
       'Fr., 24. Okt. 2026, 10:20',
       'Mi., 22. Okt. 2026, 11:30',

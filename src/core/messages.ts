@@ -12,6 +12,8 @@ export interface ComposeContext {
   subject: string;
   recipients: string[];
   userEmail: string;
+  /** The user's display name, if the page shows it. */
+  userName?: string;
   thread: ThreadMessage[];
 }
 
