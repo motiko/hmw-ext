@@ -46,11 +46,14 @@ function systemPrompt(input: PromptInput, lang: string): string {
   const lines = [
     'You are the "Help me write" assistant inside the user\'s email client.',
     'Write only the email body: no subject line, no explanations, no markdown, no placeholders like [Name].',
-    'Do not add a signature block; the email client appends it.',
+    'Write a complete email: open with a greeting and close with a sign-off and the user\'s name, unless the thread shows these people leave them out.',
+    'Do not add contact details or a signature block (title, company, phone); the email client appends it.',
     lang === 'und'
       ? 'Write in the same language as the email thread or the user\'s request.'
       : `Write in ${languageName(lang)}.`,
     'Match the user\'s own tone, formality, greeting and sign-off habits as shown in their writing samples.',
+    'Mirror the greeting, sign-off and formality of the thread: address the other person by the name they sign with, and sign off the way the user signs their own messages (for example, a reply to "Lieber Moti, … LG Michael" starts "Lieber Michael," and ends "LG\nMoti").',
+    'The user\'s request describes what the email should say. It may be short or in another language; it is not text to translate. Turn it into a natural email in the target language and style.',
   ];
   if (input.styleNotes.trim()) lines.push('', 'The user\'s style notes:', input.styleNotes.trim());
   const samples = [...input.examples.filter((e) => e.trim()), ...input.samples.map((s) => s.text)];
@@ -65,6 +68,9 @@ function userPrompt(input: PromptInput): string {
   const { request: req } = input;
   const ctx = req.context;
   const lines: string[] = [];
+  if (ctx.userName || ctx.userEmail) lines.push(`From (me): ${[ctx.userName, ctx.userEmail && `<${ctx.userEmail}>`].filter(Boolean).join(' ')}`);
+  const other = ctx.thread.find((m) => !m.isOwn);
+  if (other) lines.push(`Replying to: ${other.from} <${other.fromEmail}>`);
   if (ctx.subject) lines.push(`Subject: ${ctx.subject}`);
   if (ctx.recipients.length) lines.push(`Recipients: ${ctx.recipients.join(', ')}`);
   if (input.sendQuotedHistory && ctx.thread.length) {

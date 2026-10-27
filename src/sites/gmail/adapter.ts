@@ -1,4 +1,4 @@
-import type { ComposeContext } from '@/core/messages';
+import type { ComposeContext, ThreadMessage } from '@/core/messages';
 import type { Composer, SiteAdapter } from '../types';
 import { draftRange, replaceDraft, replaceSelection } from './insert';
 import { MAX_COMPOSER_DEPTH, SEL } from './selectors';
@@ -14,6 +14,13 @@ export function getUserEmail(doc: Document): string {
   const fromTitle = doc.title.match(/ - ([^\s@]+@[^\s@]+\.[^\s@]+) - /)?.[1];
   if (fromTitle) return fromTitle;
   return doc.querySelector(SEL.account)?.getAttribute('aria-label')?.match(EMAIL)?.[0] ?? '';
+}
+
+/** Display name from the account button ("Google Account: Name (email)"), else from the user's own messages. */
+export function getUserName(doc: Document, thread: ThreadMessage[] = []): string {
+  const label = doc.querySelector(SEL.account)?.getAttribute('aria-label') ?? '';
+  const fromLabel = label.match(/:\s*([^(\n]+?)\s*\(/)?.[1];
+  return fromLabel ?? thread.find((m) => m.isOwn && m.from)?.from ?? '';
 }
 
 const stripReplyPrefix = (s: string) => s.replace(/^((re|aw|wg|fw|fwd|antw|tr)\s*:\s*)+/i, '').trim().toLowerCase();
@@ -72,11 +79,13 @@ export const gmailAdapter: SiteAdapter = {
       const email = (el.getAttribute('email') ?? el.getAttribute('data-hovercard-id') ?? '').toLowerCase();
       if (EMAIL.test(email) && email !== userEmail.toLowerCase() && !recipients.includes(email)) recipients.push(email);
     });
+    const thread = isReply && view ? readThread(view, userEmail) : [];
     return {
       subject: subjectInput || (isReply ? threadSubject : ''),
       recipients,
       userEmail,
-      thread: isReply && view ? readThread(view, userEmail) : [],
+      userName: getUserName(doc, thread),
+      thread,
     };
   },
 

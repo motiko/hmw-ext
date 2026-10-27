@@ -59,6 +59,30 @@ describe('buildPrompt', () => {
     expect(system!.content).toContain('German');
   });
 
+  it('asks for a complete email with greeting and sign-off that mirror the thread', () => {
+    const all = text(buildPrompt(input()));
+    expect(all).toMatch(/greeting/i);
+    expect(all).toMatch(/sign-off/i);
+    expect(all).toContain('Mirror the greeting, sign-off and formality of the thread');
+    expect(all).not.toContain('Do not add a signature block');
+  });
+
+  it('treats the request as what to say, not text to translate', () => {
+    expect(text(buildPrompt(input()))).toContain('not text to translate');
+  });
+
+  it('tells the model who the user is and who the reply is to', () => {
+    const ctx = { ...req().context, userName: 'Moti Koritz' };
+    const [, user] = buildPrompt(input({ request: req({ context: ctx }) }));
+    expect(user!.content).toContain('From (me): Moti Koritz <moti@example.com>');
+    expect(user!.content).toContain('Replying to: Anna Berger <anna@example.com>');
+  });
+
+  it('leaves out the reply target for a new email', () => {
+    const ctx = { ...req().context, thread: [] };
+    expect(buildPrompt(input({ request: req({ context: ctx }) }))[1]!.content).not.toContain('Replying to');
+  });
+
   it('includes style notes, samples and examples', () => {
     const out = text(
       buildPrompt(
