@@ -53,7 +53,7 @@ Releases use [release-please](https://github.com/googleapis/release-please) and 
 | Chrome Web Store (API v2) | `CHROME_EXTENSION_ID`, `CHROME_PUBLISHER_ID`, `CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL`, `CHROME_SERVICE_ACCOUNT_PRIVATE_KEY` |
 | Edge Add-ons | `EDGE_PRODUCT_ID`, `EDGE_CLIENT_ID`, `EDGE_API_KEY` |
 
-The first Chrome Web Store upload has to be done by hand in the developer dashboard to get an extension ID. `pnpm exec wxt submit init` walks you through creating the credentials. Listing copy is in [docs/store-listing.md](docs/store-listing.md).
+The first Chrome Web Store upload has to be done by hand in the developer dashboard to get an extension ID. Step-by-step setup is in [docs/publishing.md](docs/publishing.md); listing copy is in [docs/store-listing.md](docs/store-listing.md).
 
 ## License
 
