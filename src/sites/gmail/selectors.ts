@@ -19,5 +19,8 @@ export const SEL = {
     '.gmail_signature_prefix, .gmail_signature, .gmail_quote, .gmail_extra, blockquote.gmail_quote, blockquote[type="cite"]',
 } as const;
 
-/** Max ancestors to climb from the editable body to find its toolbar. */
-export const MAX_COMPOSER_DEPTH = 12;
+/**
+ * Max ancestors to climb from the editable body to find its toolbar. Real compose dialogs
+ * need 15 (2026-10); the climb also stops at an ancestor that holds a second composer.
+ */
+export const MAX_COMPOSER_DEPTH = 30;

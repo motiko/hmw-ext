@@ -11,6 +11,10 @@ function load(name: string) {
   document.body.innerHTML = parsed.body.innerHTML;
 }
 
+/** The compose dialog from the compose-new fixture, to add to another page. */
+const composeDialog = () =>
+  new DOMParser().parseFromString(fixture('compose-new'), 'text/html').querySelector('[role="dialog"]')!;
+
 const only = () => {
   const list = gmailAdapter.findComposers(document);
   expect(list).toHaveLength(1);
@@ -26,6 +30,24 @@ describe('findComposers', () => {
   it('finds a new compose dialog', () => {
     load('compose-new');
     expect(only().root.closest('[role="dialog"]')).not.toBeNull();
+  });
+
+  it('gives each of two open compose dialogs its own toolbar', () => {
+    load('compose-new');
+    const dialog = document.querySelector('[role="dialog"]')!;
+    dialog.after(dialog.cloneNode(true));
+    const list = gmailAdapter.findComposers(document);
+    expect(list).toHaveLength(2);
+    for (const c of list) expect(c.toolbar?.closest('[role="dialog"]')).toBe(c.body.closest('[role="dialog"]'));
+  });
+
+  it('skips a body whose toolbar is missing instead of borrowing a neighbour', () => {
+    load('compose-new');
+    const dialog = document.querySelector('[role="dialog"]')!;
+    const copy = dialog.cloneNode(true) as Element;
+    copy.querySelector('tr.btC')!.remove();
+    dialog.after(copy);
+    expect(only().body.closest('[role="dialog"]')).toBe(dialog);
   });
 
   it('returns nothing for an unknown page', () => {
@@ -74,8 +96,7 @@ describe('getContext', () => {
 
   it('does not attach an unrelated thread to a new compose dialog', () => {
     load('reply-thread-de');
-    const dialog = document.createElement('div');
-    dialog.innerHTML = fixture('compose-new').match(/<div class="dw">[\s\S]*<\/div>\s*<\/body>/)![0].replace('</body>', '');
+    const dialog = composeDialog();
     document.body.appendChild(dialog);
     const compose = gmailAdapter.findComposers(document).find((c) => c.root.closest('[role="dialog"]'))!;
     const ctx = gmailAdapter.getContext(compose, document);
@@ -199,8 +220,7 @@ describe('stale views', () => {
   it('matches a pop-out reply to the visible thread only', () => {
     load('reply-thread-de');
     addHiddenOldThread();
-    const dialog = document.createElement('div');
-    dialog.innerHTML = fixture('compose-new').match(/<div class="dw">[\s\S]*<\/div>\s*<\/body>/)![0].replace('</body>', '');
+    const dialog = composeDialog();
     dialog.querySelector('input')!.setAttribute('value', 'AW: Termin am Freitag');
     document.body.appendChild(dialog);
     const pop = gmailAdapter.findComposers(document).find((c) => c.root.closest('[role="dialog"]'))!;
