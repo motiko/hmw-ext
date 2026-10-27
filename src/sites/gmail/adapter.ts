@@ -40,6 +40,8 @@ function threadView(composer: Composer, doc: Document): Element | null {
 function findComposerRoot(body: HTMLElement): { root: HTMLElement; toolbar: HTMLElement } | null {
   let el: HTMLElement | null = body.parentElement;
   for (let i = 0; el && i < MAX_COMPOSER_DEPTH; i++, el = el.parentElement) {
+    // Past this point the ancestor holds another composer, whose toolbar isn't ours.
+    if (el.querySelectorAll(SEL.body).length > 1) return null;
     const toolbar = el.querySelector<HTMLElement>(SEL.toolbar);
     if (toolbar) return { root: el, toolbar };
   }
