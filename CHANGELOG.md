@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/motiko/hmw-ext/compare/hmw-ext-v0.2.0...hmw-ext-v0.2.1) (2026-11-07)
+
+
+### Bug Fixes
+
+* **gmail:** keep the toolbar button where a press can reach it ([21db679](https://github.com/motiko/hmw-ext/commit/21db679a2671196e3cf41d9aa5feb936b3f4006c))
+* **gmail:** open Help me write on every email, also from the extension icon ([bf4def2](https://github.com/motiko/hmw-ext/commit/bf4def2362f92bc99acd71ee7ed0120c4e14968a))
+
 ## [0.2.0](https://github.com/motiko/hmw-ext/compare/hmw-ext-v0.1.0...hmw-ext-v0.2.0) (2026-10-28)
 
 
