@@ -107,6 +107,22 @@ describe('getContext', () => {
   });
 });
 
+describe('getPageContext', () => {
+  it('reads the visible thread without a composer', () => {
+    load('reply-thread-de');
+    const ctx = gmailAdapter.getPageContext(document);
+    expect(ctx.subject).toBe('Termin am Freitag');
+    expect(ctx.recipients).toEqual(['anna@example.org']);
+    expect(ctx.thread[0]!.text).toContain('Wann passt es dir stattdessen?');
+  });
+
+  it('is empty outside a conversation', () => {
+    load('compose-new');
+    const ctx = gmailAdapter.getPageContext(document);
+    expect(ctx).toMatchObject({ subject: '', recipients: [], thread: [], userEmail: 'moti@example.com' });
+  });
+});
+
 describe('getDraft', () => {
   it('excludes signature and quoted history', () => {
     load('reply-thread-de');

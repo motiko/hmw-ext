@@ -12,7 +12,9 @@ export interface CardProps {
   getContext(): ComposeContext;
   /** The user's draft or selection, captured when the card opened. */
   draft: { text: string; isSelection: boolean };
-  onInsert(text: string, mode: InsertMode): void;
+  /** Omitted when there is no draft to write into: the result is copied instead. */
+  onInsert?(text: string, mode: InsertMode): void;
+  copy?(text: string): Promise<void>;
   onClose(): void;
   openSettings(): void;
   generate: Generate;
@@ -32,6 +34,7 @@ export function HelpMeWriteCard(props: CardProps) {
   const [language, setLanguage] = useState('auto');
   const [text, setText] = useState('');
   const [error, setError] = useState<{ code: ErrorCode; message: string } | null>(null);
+  const [copyError, setCopyError] = useState('');
   const [lastRequest, setLastRequest] = useState<GenerateRequest | null>(null);
   const handle = useRef<{ abort(): void } | null>(null);
   const textRef = useRef('');
@@ -109,8 +112,16 @@ export function HelpMeWriteCard(props: CardProps) {
   };
 
   const insert = () => {
-    props.onInsert(text, props.draft.isSelection ? 'replace-selection' : 'replace-draft');
-    props.onClose();
+    if (props.onInsert) {
+      props.onInsert(text, props.draft.isSelection ? 'replace-selection' : 'replace-draft');
+      props.onClose();
+      return;
+    }
+    const copy = props.copy ?? ((t: string) => navigator.clipboard.writeText(t));
+    copy(text).then(
+      () => props.onClose(),
+      (e: Error) => setCopyError(`Could not copy: ${e.message}`),
+    );
   };
 
   const onKeyDown = (e: KeyboardEvent) => {
@@ -209,6 +220,11 @@ export function HelpMeWriteCard(props: CardProps) {
                   <Send />
                 </button>
               </form>
+              {copyError && (
+                <div class="error" role="alert">
+                  {copyError}
+                </div>
+              )}
               <div class="card-foot">
                 <button type="button" class="text-btn" onClick={() => lastRequest && run(lastRequest)}>
                   Recreate
@@ -216,7 +232,7 @@ export function HelpMeWriteCard(props: CardProps) {
                 <RefineMenu onPick={refineResult} />
                 <span class="spacer" />
                 <button type="button" class="primary" onClick={insert}>
-                  Insert
+                  {props.onInsert ? 'Insert' : 'Copy'}
                 </button>
               </div>
             </>
