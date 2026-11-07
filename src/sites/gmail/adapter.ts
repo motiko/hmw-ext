@@ -55,6 +55,37 @@ function findComposerRoot(body: HTMLElement): { root: HTMLElement; toolbar: HTML
   return null;
 }
 
+/**
+ * Where the toolbar button may sit, in order of preference: the end of the toolbar,
+ * then right after Send. Gmail sometimes covers or clips one of them.
+ */
+const SLOT_PLACES: ((toolbar: HTMLElement, cell: HTMLElement) => void)[] = [
+  (toolbar, cell) => {
+    if (toolbar.lastElementChild !== cell) toolbar.appendChild(cell);
+  },
+  (toolbar, cell) => {
+    const send = [...toolbar.children].find((c) => c !== cell) ?? null;
+    if (send && send.nextElementSibling !== cell) toolbar.insertBefore(cell, send.nextSibling);
+  },
+];
+let gaveUp = new WeakSet<HTMLElement>();
+
+/**
+ * Whether a press at the centre of `host` would reach it. Null when that can't be told
+ * (not laid out, or the point is outside the window).
+ */
+function isReachable(host: HTMLElement): boolean | null {
+  const r = host.getBoundingClientRect();
+  if (!r.width || !r.height) return null;
+  const x = r.left + r.width / 2;
+  const y = r.top + r.height / 2;
+  const doc = host.ownerDocument;
+  const win = doc.defaultView;
+  if (!win || x < 0 || y < 0 || x >= win.innerWidth || y >= win.innerHeight) return null;
+  const hit = doc.elementFromPoint(x, y);
+  return Boolean(hit && (hit === host || host.contains(hit)));
+}
+
 export const gmailAdapter: SiteAdapter = {
   findComposers(doc) {
     const out: Composer[] = [];
@@ -135,8 +166,23 @@ export const gmailAdapter: SiteAdapter = {
     cell.setAttribute('data-hmw-slot', '');
     const host = doc.createElement('div');
     cell.appendChild(host);
-    const after = toolbar.children[1] ?? null;
-    toolbar.insertBefore(cell, after ? after.nextSibling : null);
+    SLOT_PLACES[0]!(toolbar, cell);
     return host;
+  },
+
+  keepReachable(composer) {
+    const cell = composer.toolbar?.querySelector<HTMLElement>(SEL.toolbarSlot);
+    const host = cell?.firstElementChild as HTMLElement | null;
+    if (!cell || !host || isReachable(host) !== false || gaveUp.has(cell)) return;
+    for (const place of SLOT_PLACES) {
+      place(composer.toolbar!, cell);
+      if (isReachable(host)) return;
+    }
+    // Covered everywhere: stay put rather than move on every scan.
+    gaveUp.add(cell);
+  },
+
+  retryReachable() {
+    gaveUp = new WeakSet();
   },
 };

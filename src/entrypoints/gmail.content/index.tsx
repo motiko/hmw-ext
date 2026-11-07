@@ -93,7 +93,10 @@ export default defineContentScript({
 
     const scan = () => {
       for (const composer of adapter.findComposers(document)) {
-        if (composer.body.hasAttribute(MARK)) continue;
+        if (composer.body.hasAttribute(MARK)) {
+          adapter.keepReachable(composer);
+          continue;
+        }
         const slot = adapter.mountPoint(composer);
         if (!slot) continue;
         composer.body.setAttribute(MARK, '1');
@@ -106,8 +109,13 @@ export default defineContentScript({
           composer.body.removeAttribute(MARK);
           composer.body.removeEventListener('focusin', onFocus);
         });
+        adapter.keepReachable(composer);
         void learnFrom(composer);
       }
+    };
+    const rescan = () => {
+      adapter.retryReachable();
+      scan();
     };
 
     let timer: number | undefined;
@@ -116,6 +124,11 @@ export default defineContentScript({
       timer = ctx.setTimeout(scan, SCAN_DEBOUNCE_MS);
     });
     observer.observe(document.body, { childList: true, subtree: true });
+    // Covering can change without DOM changes; check again when the layout does.
+    ctx.addEventListener(window, 'resize', () => {
+      clearTimeout(timer);
+      timer = ctx.setTimeout(rescan, SCAN_DEBOUNCE_MS);
+    });
     // On extension update/reload, remove our UI so the new content script can mount fresh buttons.
     ctx.onInvalidated(() => {
       observer.disconnect();
