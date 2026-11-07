@@ -4,7 +4,7 @@
 //
 //   node .claude/skills/run-hmw-ext/driver.mjs [scenario ...] [--out DIR] [--headed]
 //
-// Scenarios (default: all): button, icon, toggle. Each prints PASS/FAIL lines and saves
+// Scenarios (default: all): button, cover, icon, toggle. Each prints PASS/FAIL lines and saves
 // screenshots to --out (default: ./run-shots). Exit code 1 if any check failed.
 /* global chrome -- used only inside worker.evaluate(), which runs in the extension's service worker */
 import { chromium } from '@playwright/test';
@@ -21,7 +21,7 @@ const flag = (name) => {
 };
 const OUT = resolve(flag('--out') ?? 'run-shots');
 const headed = args.includes('--headed') && args.splice(args.indexOf('--headed'), 1);
-const scenarios = args.length ? args : ['button', 'icon', 'toggle'];
+const scenarios = args.length ? args : ['button', 'cover', 'icon', 'toggle'];
 const REPLY = ['Hallo Anna,', '\n\n', 'Donnerstag passt. ', 'Bis dann!'];
 const BUTTON = 'button[aria-label="Help me write"]';
 
@@ -106,6 +106,34 @@ const run = {
     const body = await page.locator('[role="textbox"]').innerText();
     check('insert puts the reply above the signature', body.indexOf('Donnerstag passt.') >= 0 && body.indexOf('Donnerstag passt.') < body.indexOf('Moti Koritz |'));
     await shot(page, 'button-3-inserted');
+    await page.close();
+  },
+
+  // Something covers the button at the end of the toolbar: it moves next to Send and still opens.
+  async cover() {
+    const page = await openGmail('reply-thread-de');
+    const topmost = () =>
+      page.evaluate(() => {
+        const host = document.querySelector('td[data-hmw-slot] > div');
+        const r = host.getBoundingClientRect();
+        return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === host;
+      });
+    check('button is reachable at the end of the toolbar', await topmost());
+    const r = await page.locator(BUTTON).boundingBox();
+    await page.evaluate((r) => {
+      const cover = document.createElement('div');
+      Object.assign(cover.style, { position: 'fixed', left: `${r.x - 4}px`, top: `${r.y - 4}px`, width: `${r.width + 8}px`, height: `${r.height + 8}px`, zIndex: '10', background: 'rgba(255,0,0,.3)' });
+      document.body.appendChild(cover);
+    }, r);
+    await page.waitForFunction(() => {
+      const host = document.querySelector('td[data-hmw-slot] > div');
+      const b = host.getBoundingClientRect();
+      return document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2) === host;
+    }).catch(() => {});
+    check('button moves out from under the cover', await topmost());
+    await shot(page, 'cover-1-moved');
+    await page.click(BUTTON);
+    check('moved button opens the card', await page.getByRole('dialog', { name: 'Refine my draft' }).isVisible());
     await page.close();
   },
 

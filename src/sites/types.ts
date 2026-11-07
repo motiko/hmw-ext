@@ -19,4 +19,8 @@ export interface SiteAdapter {
   insert(composer: Composer, text: string, mode: InsertMode): void;
   /** Element to host the toolbar button, created on first call. */
   mountPoint(composer: Composer): HTMLElement | null;
+  /** Moves the toolbar button somewhere else in the toolbar if another element covers or clips it. */
+  keepReachable(composer: Composer): void;
+  /** Lets keepReachable try again where it gave up (e.g. after the window resized). */
+  retryReachable(): void;
 }

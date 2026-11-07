@@ -186,14 +186,21 @@ describe('insert', () => {
 });
 
 describe('mountPoint', () => {
-  it('adds one toolbar cell after the formatting button, idempotently', () => {
+  it('adds one toolbar cell at the end of the toolbar, idempotently', () => {
     load('reply-thread-de');
     const c = only();
     const a = gmailAdapter.mountPoint(c);
     const b = gmailAdapter.mountPoint(c);
     expect(a).toBe(b);
-    const cells = [...c.toolbar!.children];
-    expect(cells.indexOf(a!.closest('td')!)).toBe(2);
+    expect(c.toolbar!.lastElementChild).toBe(a!.closest('td'));
+  });
+
+  it('leaves the button in place when reachability cannot be measured', () => {
+    load('reply-thread-de');
+    const c = only();
+    const slot = gmailAdapter.mountPoint(c)!;
+    gmailAdapter.keepReachable(c); // no layout here: every rect is empty
+    expect(c.toolbar!.lastElementChild).toBe(slot.closest('td'));
   });
 });
 

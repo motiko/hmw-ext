@@ -45,6 +45,7 @@ The card should look like Gmail's own panel (rounded, shadowed, Google Sans).
 | Scenario | What it does |
 |---|---|
 | `button` | Opens `reply-thread-de` and blocks all clicks the way real Gmail does on some toolbars. Presses the toolbar button with a real mouse press, then **Polish** → **Insert**, and checks the reply lands above the signature. |
+| `cover` | Checks the button is the topmost element at the end of the toolbar, then puts a red box over it. The button should move next to Send and still open the card. |
 | `icon` | Removes the composer, sends the icon's `open-card` message, then **Create** → **Copy**, and checks the clipboard and that the card closes. |
 | `toggle` | On `compose-new`, sends `open-card` twice: the card opens, then closes. |
 
@@ -70,6 +71,7 @@ pnpm build && pnpm test:e2e                # Playwright, same browser setup as t
 - **The toolbar icon can't be clicked from a script.** The driver sends the same `{type: 'open-card'}` message from the service worker that `action.onClicked` and Alt+H send.
 - **`chrome.tabs.query({url})` returns nothing** because the extension has no `tabs` permission and can't see URLs. Use `{active: true, lastFocusedWindow: true}` after `page.bringToFront()`.
 - **A page-wide click blocker breaks the card too.** The card's buttons use ordinary `onClick`. The `button` scenario removes its blocker once the card is open.
+- **The button checks whether it can be reached** with `elementFromPoint` at its centre (`keepReachable` in `src/sites/gmail/adapter.ts`). This runs after DOM changes (300 ms debounce) and on resize, so a cover that appears by scrolling alone is caught only on the next mutation or resize. When the button is off-screen or not laid out (happy-dom), the check gives no answer and the button stays where it is.
 - **On `compose-new` the open card covers the toolbar button**, so Playwright can't press the button a second time.
 - **The clipboard needs permission:** `ctx.grantPermissions(['clipboard-read', 'clipboard-write'], {origin: 'https://mail.google.com'})`.
 - **Real Gmail differs from the fixtures.** Real compose dialogs nest the toolbar about 14 levels deep, and some toolbars swallow clicks. If something works here but not in real Gmail, have the user run a DevTools snippet to see the real page, then update the fixture.

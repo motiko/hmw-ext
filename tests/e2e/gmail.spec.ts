@@ -3,6 +3,15 @@ import { expect, test } from './fixtures';
 const body = '[role="textbox"][contenteditable="true"]';
 const button = 'button[aria-label="Help me write"]';
 
+/** True when a press at the centre of the toolbar button would reach it. */
+const topmostIsButton = (page: import('@playwright/test').Page) =>
+  page.evaluate(() => {
+    const host = document.querySelector<HTMLElement>('td[data-hmw-slot] > div')!;
+    const r = host.getBoundingClientRect();
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return hit === host;
+  });
+
 test('create → stream → insert keeps the signature', async ({ openGmail, configure }) => {
   await configure();
   const page = await openGmail('compose-new');
@@ -104,6 +113,31 @@ test('the toolbar button opens even where the page swallows clicks', async ({ op
   await page.locator(button).waitFor();
   // Gmail eats clicks on some toolbars before they reach our button.
   await page.evaluate(() => window.addEventListener('click', (e) => e.stopImmediatePropagation(), true));
+  await page.click(button);
+  await expect(page.getByRole('dialog', { name: 'Refine my draft' })).toBeVisible();
+});
+
+for (const fixture of ['compose-new', 'reply-thread-de'] as const) {
+  test(`the toolbar button is the topmost element where it sits (${fixture})`, async ({ openGmail }) => {
+    const page = await openGmail(fixture);
+    await page.locator(button).waitFor();
+    expect(await topmostIsButton(page)).toBe(true);
+  });
+}
+
+test('the toolbar button moves next to Send when something covers it', async ({ openGmail }) => {
+  const page = await openGmail('reply-thread-de');
+  await page.locator(button).waitFor();
+  const before = (await page.locator(button).boundingBox())!;
+  // Something Gmail-owned lands on top of the button's spot at the end of the toolbar.
+  await page.evaluate((r) => {
+    const cover = document.createElement('div');
+    Object.assign(cover.style, { position: 'fixed', left: `${r.x - 4}px`, top: `${r.y - 4}px`, width: `${r.width + 8}px`, height: `${r.height + 8}px`, zIndex: '10', background: 'rgba(255,0,0,.3)' });
+    document.body.appendChild(cover);
+  }, before);
+  await expect.poll(() => topmostIsButton(page)).toBe(true);
+  const cells = await page.locator('tr.btC > td').evaluateAll((tds) => tds.map((td) => td.hasAttribute('data-hmw-slot')));
+  expect(cells.indexOf(true)).toBe(1);
   await page.click(button);
   await expect(page.getByRole('dialog', { name: 'Refine my draft' })).toBeVisible();
 });
