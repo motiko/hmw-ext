@@ -64,14 +64,25 @@ function handlePort(port: Browser.runtime.Port) {
   });
 }
 
+/** Asks the tab's content script to toggle the card; false where none runs (not Gmail, or Gmail not reloaded since install). */
+async function openCardIn(tab?: Browser.tabs.Tab): Promise<boolean> {
+  if (tab?.id === undefined) return false;
+  return browser.tabs.sendMessage(tab.id, { type: 'open-card' }).then(
+    () => true,
+    () => false,
+  );
+}
+
 export default defineBackground(() => {
   browser.runtime.onConnect.addListener(handlePort);
   browser.runtime.onMessage.addListener((msg: RuntimeMessage, _sender, sendResponse) => {
     void handleMessage(msg).then(sendResponse);
     return true;
   });
-  browser.commands.onCommand.addListener(async (command, tab) => {
-    if (command !== 'open-help-me-write' || tab?.id === undefined) return;
-    await browser.tabs.sendMessage(tab.id, { type: 'open-card' }).catch(() => {});
+  browser.commands.onCommand.addListener((command, tab) => {
+    if (command === 'open-help-me-write') void openCardIn(tab);
+  });
+  browser.action.onClicked.addListener(async (tab) => {
+    if (!(await openCardIn(tab))) await browser.runtime.openOptionsPage();
   });
 });

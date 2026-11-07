@@ -74,6 +74,30 @@ describe('HelpMeWriteCard', () => {
     expect(props.onClose).toHaveBeenCalled();
   });
 
+  it('copies the result instead when there is no draft to insert into', async () => {
+    const copy = vi.fn(async () => {});
+    const { emit, props } = setup({ onInsert: undefined, copy });
+    fireEvent.input(screen.getByPlaceholderText(/Ask for a draft/), { target: { value: 'x' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    emit({ type: 'token', text: 'Hallo Anna' });
+    emit({ type: 'done' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Copy' }));
+    expect(copy).toHaveBeenCalledWith('Hallo Anna');
+    await vi.waitFor(() => expect(props.onClose).toHaveBeenCalled());
+  });
+
+  it('keeps the result and shows why when copying fails', async () => {
+    const { emit, props } = setup({ onInsert: undefined, copy: async () => Promise.reject(new Error('denied')) });
+    fireEvent.input(screen.getByPlaceholderText(/Ask for a draft/), { target: { value: 'x' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    emit({ type: 'token', text: 'Hallo Anna' });
+    emit({ type: 'done' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Copy' }));
+    expect((await screen.findByRole('alert')).textContent).toBe('Could not copy: denied');
+    expect(screen.getByText('Hallo Anna')).toBeTruthy();
+    expect(props.onClose).not.toHaveBeenCalled();
+  });
+
   it('refines a selection with Polish and inserts over the selection', async () => {
     const { requests, emit, props } = setup({ mode: 'refine', draft: { text: 'Habe ich vermisst', isSelection: true } });
     fireEvent.click(screen.getByRole('button', { name: 'Polish' }));

@@ -98,3 +98,40 @@ test("uses Chrome's language detection for languages beyond the UI list", async 
   const sent = llm.requests.find((r) => r.path === '/v1/chat/completions')!.body as { messages: { content: string }[] };
   expect(sent.messages[0]!.content).toContain('Write in Swedish');
 });
+
+test('the toolbar button opens even where the page swallows clicks', async ({ openGmail }) => {
+  const page = await openGmail('reply-thread-de');
+  await page.locator(button).waitFor();
+  // Gmail eats clicks on some toolbars before they reach our button.
+  await page.evaluate(() => window.addEventListener('click', (e) => e.stopImmediatePropagation(), true));
+  await page.click(button);
+  await expect(page.getByRole('dialog', { name: 'Refine my draft' })).toBeVisible();
+});
+
+test('the keyboard opens the card from the toolbar button', async ({ openGmail }) => {
+  const page = await openGmail('compose-new');
+  await page.locator(button).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('dialog', { name: 'Help me write' })).toBeVisible();
+});
+
+test('the extension icon opens the card without a composer and copies the result', async ({ openGmail, configure, context, worker }) => {
+  await configure();
+  const page = await openGmail('reply-thread-de');
+  await page.locator(button).waitFor();
+  // No composer on the page: just the conversation.
+  await page.evaluate(() => document.querySelectorAll('[role="textbox"]').forEach((el) => el.remove()));
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'https://mail.google.com' });
+  await worker.evaluate(async () => {
+    const { chrome } = globalThis as unknown as {
+      chrome: { tabs: { query(q: object): Promise<{ id: number }[]>; sendMessage(id: number, m: object): Promise<unknown> } };
+    };
+    const [tab] = await chrome.tabs.query({ active: true });
+    await chrome.tabs.sendMessage(tab!.id, { type: 'open-card' });
+  });
+  await page.getByPlaceholder(/Ask for a draft/).fill('Tell Anna Thursday works');
+  await page.getByRole('button', { name: 'Create' }).click();
+  await page.getByRole('button', { name: 'Copy' }).click();
+  await expect(page.locator('[data-hmw-card]')).toHaveCount(0);
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('Donnerstag passt.');
+});

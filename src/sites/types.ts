@@ -12,6 +12,8 @@ export type InsertMode = 'replace-draft' | 'replace-selection';
 export interface SiteAdapter {
   findComposers(doc: Document): Composer[];
   getContext(composer: Composer, doc: Document): ComposeContext;
+  /** Context when no composer is open: the visible conversation, if any. */
+  getPageContext(doc: Document): ComposeContext;
   /** Captures the selection (if any) so a later insert can replace it after focus moved away. */
   getDraft(composer: Composer): { text: string; isSelection: boolean };
   insert(composer: Composer, text: string, mode: InsertMode): void;

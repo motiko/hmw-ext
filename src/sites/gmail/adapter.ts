@@ -38,8 +38,8 @@ function isHidden(el: Element): boolean {
  * The conversation view a composer belongs to. Gmail keeps earlier views hidden in the DOM,
  * so inline replies use their own view and dialogs use the visible one.
  */
-function threadView(composer: Composer, doc: Document): Element | null {
-  const own = composer.root.closest(SEL.view);
+function threadView(composer: Composer | null, doc: Document): Element | null {
+  const own = composer?.root.closest(SEL.view);
   if (own) return own;
   return [...doc.querySelectorAll(SEL.view)].find((v) => v.querySelector(SEL.threadSubject) && !isHidden(v)) ?? null;
 }
@@ -87,6 +87,18 @@ export const gmailAdapter: SiteAdapter = {
       userName: getUserName(doc, thread),
       thread,
     };
+  },
+
+  getPageContext(doc): ComposeContext {
+    const userEmail = getUserEmail(doc);
+    const view = threadView(null, doc);
+    const subject = view?.querySelector(SEL.threadSubject)?.textContent?.trim() ?? '';
+    const thread = subject && view ? readThread(view, userEmail) : [];
+    const lowerUser = userEmail.toLowerCase();
+    const recipients = [...new Set(thread.filter((m) => !m.isOwn).map((m) => m.fromEmail.toLowerCase()))].filter(
+      (e) => e && e !== lowerUser,
+    );
+    return { subject, recipients, userEmail, userName: getUserName(doc, thread), thread };
   },
 
   getDraft(composer) {

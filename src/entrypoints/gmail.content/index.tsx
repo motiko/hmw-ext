@@ -22,24 +22,28 @@ export default defineContentScript({
     const learned = new Set<string>();
     const mounted: (() => void)[] = [];
 
-    const openCard = (composer: Composer) => {
+    /** Opens the card on `composer`, or, with none, over the page with the result copied instead of inserted. */
+    const openCard = (composer: Composer | null) => {
       closeCard?.();
-      const draft = adapter.getDraft(composer);
+      const draft = composer ? adapter.getDraft(composer) : { text: '', isSelection: false };
       const host = document.createElement('div');
       host.setAttribute('data-hmw-card', '');
       Object.assign(host.style, { position: 'fixed', zIndex: '2147483000' });
       document.body.appendChild(host);
 
       const place = () => {
-        const r = composer.body.getBoundingClientRect();
-        const width = Math.min(CARD_MAX_WIDTH, Math.max(320, r.width - 16));
+        const r = composer?.body.getBoundingClientRect() ?? new DOMRect((window.innerWidth - CARD_MAX_WIDTH) / 2, 64, CARD_MAX_WIDTH, 0);
+        const width = Math.min(CARD_MAX_WIDTH, Math.max(320, r.width - 16), window.innerWidth - 16);
         const left = Math.min(Math.max(8, r.left + 8), window.innerWidth - width - 8);
         const height = host.offsetHeight || 240;
         const top = Math.min(Math.max(8, r.top + 8), window.innerHeight - height - 8);
         Object.assign(host.style, { left: `${left}px`, top: `${top}px`, width: `${width}px` });
       };
       const onOutside = (e: MouseEvent) => {
-        if (!e.composedPath().includes(host)) close();
+        const path = e.composedPath();
+        // A press on our own toolbar button reopens the card itself; don't race it.
+        if (path.includes(host) || path.some((n) => n instanceof Element && n.hasAttribute('data-hmw-slot'))) return;
+        close();
       };
       let unmount = () => {};
       const close = () => {
@@ -49,7 +53,7 @@ export default defineContentScript({
         window.removeEventListener('scroll', place, true);
         document.removeEventListener('mousedown', onOutside, true);
         if (closeCard === close) closeCard = null;
-        composer.body.focus();
+        composer?.body.focus();
       };
       unmount = mountShadow(
         host,
@@ -57,8 +61,8 @@ export default defineContentScript({
         <HelpMeWriteCard
           mode={draft.text ? 'refine' : 'create'}
           draft={draft}
-          getContext={() => adapter.getContext(composer, document)}
-          onInsert={(text, mode) => adapter.insert(composer, text, mode)}
+          getContext={() => (composer ? adapter.getContext(composer, document) : adapter.getPageContext(document))}
+          onInsert={composer ? (text, mode) => adapter.insert(composer, text, mode) : undefined}
           onClose={close}
           openSettings={() => void sendRuntime({ type: 'open-options' })}
           generate={startGeneration}
@@ -122,10 +126,12 @@ export default defineContentScript({
 
     browser.runtime.onMessage.addListener((msg: { type?: string }) => {
       if (msg?.type !== 'open-card') return;
+      // Toggle, so the shortcut or extension icon also closes the card.
+      if (closeCard) return closeCard();
       const composers = adapter.findComposers(document);
       const focused = composers.find((c) => c.root.contains(document.activeElement));
-      const target = focused ?? composers.find((c) => c.body === lastComposer?.body) ?? composers[0];
-      if (target) openCard(target);
+      const target = focused ?? composers.find((c) => c.body === lastComposer?.body) ?? composers[0] ?? null;
+      openCard(target);
     });
   },
 });
